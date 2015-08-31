@@ -1788,111 +1788,110 @@ JSONEditor.defaults.editors["null"] = JSONEditor.AbstractEditor.extend({
   }
 });
 
-JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
+JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend( {
   register: function() {
     this._super();
-    if(!this.input) return;
-    this.input.setAttribute('name',this.formname);
+    if ( !this.input ) return;
+    this.input.setAttribute( 'name', this.formname );
   },
   unregister: function() {
     this._super();
-    if(!this.input) return;
-    this.input.removeAttribute('name');
+    if ( !this.input ) return;
+    this.input.removeAttribute( 'name' );
   },
-  setValue: function(value,initial,from_template) {
+  setValue: function( value, initial, from_template ) {
     var self = this;
-    
-    if(this.template && !from_template) {
+
+    if ( this.template && !from_template ) {
       return;
     }
-    
-    if(value === null || typeof value === 'undefined') value = "";
-    else if(typeof value === "object") value = JSON.stringify(value);
-    else if(typeof value !== "string") value = ""+value;
-    
-    if(value === this.serialized) return;
+
+    if ( value === null || typeof value === 'undefined' ) value = "";
+    else if ( typeof value === "object" ) value = JSON.stringify( value );
+    else if ( typeof value !== "string" ) value = "" + value;
+
+    if ( value === this.serialized ) return;
 
     // Sanitize value before setting it
-    var sanitized = this.sanitize(value);
+    var sanitized = this.sanitize( value );
 
-    if(this.input.value === sanitized) {
+    if ( this.input.value === sanitized ) {
       return;
     }
 
     this.input.value = sanitized;
-    
+
     // If using SCEditor, update the WYSIWYG
-    if(this.sceditor_instance) {
-      this.sceditor_instance.val(sanitized);
+    if ( this.sceditor_instance ) {
+      this.sceditor_instance.val( sanitized );
+    } else if ( this.epiceditor ) {
+      this.epiceditor.importFile( null, sanitized );
+    } else if ( this.ace_editor ) {
+      this.ace_editor.setValue( sanitized );
     }
-    else if(this.epiceditor) {
-      this.epiceditor.importFile(null,sanitized);
-    }
-    else if(this.ace_editor) {
-      this.ace_editor.setValue(sanitized);
-    }
-    
+
     var changed = from_template || this.getValue() !== value;
-    
+
     this.refreshValue();
-    
-    if(initial) this.is_dirty = false;
-    else if(this.jsoneditor.options.show_errors === "change") this.is_dirty = true;
-    
-    if(this.adjust_height) this.adjust_height(this.input);
+
+    if ( initial ) this.is_dirty = false;
+    else if ( this.jsoneditor.options.show_errors === "change" ) this.is_dirty = true;
+
+    if ( this.adjust_height ) this.adjust_height( this.input );
 
     // Bubble this setValue to parents if the value changed
-    this.onChange(changed);
+    this.onChange( changed );
   },
   getNumColumns: function() {
-    var min = Math.ceil(Math.max(this.getTitle().length,this.schema.maxLength||0,this.schema.minLength||0)/5);
+    var min = Math.ceil( Math.max( this.getTitle().length, this.schema.maxLength || 0, this.schema.minLength || 0 ) / 5 );
     var num;
-    
-    if(this.input_type === 'textarea') num = 6;
-    else if(['text','email'].indexOf(this.input_type) >= 0) num = 4;
+
+    if ( this.input_type === 'textarea' ) num = 6;
+    else if ( [ 'text', 'email' ].indexOf( this.input_type ) >= 0 ) num = 4;
     else num = 2;
-    
-    return Math.min(12,Math.max(min,num));
+
+    return Math.min( 12, Math.max( min, num ) );
   },
   build: function() {
-    var self = this, i;
-    if(!this.options.compact) this.header = this.label = this.theme.getFormInputLabel(this.getTitle());
-    if(this.schema.description) this.description = this.theme.getFormInputDescription(this.schema.description);
+    var self = this,
+      i;
+    if ( !this.options.compact ) this.header = this.label = this.theme.getFormInputLabel( this.getTitle() );
+    if ( this.schema.description ) this.description = this.theme.getFormInputDescription( this.schema.description );
 
     this.format = this.schema.format;
-    if(!this.format && this.schema.media && this.schema.media.type) {
-      this.format = this.schema.media.type.replace(/(^(application|text)\/(x-)?(script\.)?)|(-source$)/g,'');
+    if ( !this.format && this.schema.media && this.schema.media.type ) {
+      this.format = this.schema.media.type.replace( /(^(application|text)\/(x-)?(script\.)?)|(-source$)/g, '' );
     }
-    if(!this.format && this.options.default_format) {
+    if ( !this.format && this.options.default_format ) {
       this.format = this.options.default_format;
     }
-    if(this.options.format) {
+    if ( this.options.format ) {
       this.format = this.options.format;
     }
 
     // Specific format
-    if(this.format) {
+    if ( this.format ) {
       // Text Area
-      if(this.format === 'textarea') {
+      if ( this.format === 'textarea' ) {
         this.input_type = 'textarea';
         this.input = this.theme.getTextareaInput();
       }
       // Range Input
-      else if(this.format === 'range') {
+      else if ( this.format === 'range' ) {
         this.input_type = 'range';
         var min = this.schema.minimum || 0;
-        var max = this.schema.maximum || Math.max(100,min+1);
+        var max = this.schema.maximum || Math.max( 100, min + 1 );
         var step = 1;
-        if(this.schema.multipleOf) {
-          if(min%this.schema.multipleOf) min = Math.ceil(min/this.schema.multipleOf)*this.schema.multipleOf;
-          if(max%this.schema.multipleOf) max = Math.floor(max/this.schema.multipleOf)*this.schema.multipleOf;
+        if ( this.schema.multipleOf ) {
+          if ( min % this.schema.multipleOf ) min = Math.ceil( min / this.schema.multipleOf ) * this.schema.multipleOf;
+          if ( max % this.schema.multipleOf ) max = Math.floor( max / this.schema.multipleOf ) * this.schema.multipleOf;
           step = this.schema.multipleOf;
         }
 
-        this.input = this.theme.getRangeInput(min,max,step);
+        this.input = this.theme.getRangeInput( min, max, step );
       }
       // Source Code
-      else if([
+      else if ( [
           'actionscript',
           'batchfile',
           'bbcode',
@@ -1942,128 +1941,124 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
           'vbscript',
           'xml',
           'yaml'
-        ].indexOf(this.format) >= 0
-      ) {
+        ].indexOf( this.format ) >= 0 ) {
         this.input_type = this.format;
         this.source_code = true;
-        
+
         this.input = this.theme.getTextareaInput();
       }
       // HTML5 Input type
       else {
         this.input_type = this.format;
-        this.input = this.theme.getFormInputField(this.input_type);
+        this.input = this.theme.getFormInputField( this.input_type );
       }
     }
     // Normal text input
     else {
       this.input_type = 'text';
-      this.input = this.theme.getFormInputField(this.input_type);
+      this.input = this.theme.getFormInputField( this.input_type );
     }
-    
+
     // minLength, maxLength, and pattern
-    if(typeof this.schema.maxLength !== "undefined") this.input.setAttribute('maxlength',this.schema.maxLength);
-    if(typeof this.schema.pattern !== "undefined") this.input.setAttribute('pattern',this.schema.pattern);
-    else if(typeof this.schema.minLength !== "undefined") this.input.setAttribute('pattern','.{'+this.schema.minLength+',}');
+    if ( typeof this.schema.maxLength !== "undefined" ) this.input.setAttribute( 'maxlength', this.schema.maxLength );
+    if ( typeof this.schema.pattern !== "undefined" ) this.input.setAttribute( 'pattern', this.schema.pattern );
+    else if ( typeof this.schema.minLength !== "undefined" ) this.input.setAttribute( 'pattern', '.{' + this.schema.minLength + ',}' );
 
-    if(this.options.compact) {
+    if ( this.options.compact ) {
       this.container.className += ' compact';
-    }
-    else {
-      if(this.options.input_width) this.input.style.width = this.options.input_width;
+    } else {
+      if ( this.options.input_width ) this.input.style.width = this.options.input_width;
     }
 
-    if(this.schema.readOnly || this.schema.readonly || this.schema.template) {
+    if ( this.schema.readOnly || this.schema.readonly || this.schema.template ) {
       this.always_disabled = true;
       this.input.disabled = true;
     }
 
     this.input
-      .addEventListener('change',function(e) {        
+      .addEventListener( 'change', function( e ) {
         e.preventDefault();
         e.stopPropagation();
-        
+
         // Don't allow changing if this field is a template
-        if(self.schema.template) {
+        if ( self.schema.template ) {
           this.value = self.value;
           return;
         }
 
         var val = this.value;
-        
+
         // sanitize value
-        var sanitized = self.sanitize(val);
-        if(val !== sanitized) {
+        var sanitized = self.sanitize( val );
+        if ( val !== sanitized ) {
           this.value = sanitized;
         }
-        
+
         self.is_dirty = true;
 
         self.refreshValue();
-        self.onChange(true);
-      });
-      
-    if(this.options.input_height) this.input.style.height = this.options.input_height;
-    if(this.options.expand_height) {
-      this.adjust_height = function(el) {
-        if(!el) return;
-        var i, ch=el.offsetHeight;
+        self.onChange( true );
+      } );
+
+    if ( this.options.input_height ) this.input.style.height = this.options.input_height;
+    if ( this.options.expand_height ) {
+      this.adjust_height = function( el ) {
+        if ( !el ) return;
+        var i, ch = el.offsetHeight;
         // Input too short
-        if(el.offsetHeight < el.scrollHeight) {
-          i=0;
-          while(el.offsetHeight < el.scrollHeight+3) {
-            if(i>100) break;
+        if ( el.offsetHeight < el.scrollHeight ) {
+          i = 0;
+          while ( el.offsetHeight < el.scrollHeight + 3 ) {
+            if ( i > 100 ) break;
             i++;
             ch++;
-            el.style.height = ch+'px';
+            el.style.height = ch + 'px';
           }
-        }
-        else {
-          i=0;
-          while(el.offsetHeight >= el.scrollHeight+3) {
-            if(i>100) break;
+        } else {
+          i = 0;
+          while ( el.offsetHeight >= el.scrollHeight + 3 ) {
+            if ( i > 100 ) break;
             i++;
             ch--;
-            el.style.height = ch+'px';
+            el.style.height = ch + 'px';
           }
-          el.style.height = (ch+1)+'px';
+          el.style.height = ( ch + 1 ) + 'px';
         }
       };
-      
-      this.input.addEventListener('keyup',function(e) {
-        self.adjust_height(this);
-      });
-      this.input.addEventListener('change',function(e) {
-        self.adjust_height(this);
-      });
+
+      this.input.addEventListener( 'keyup', function( e ) {
+        self.adjust_height( this );
+      } );
+      this.input.addEventListener( 'change', function( e ) {
+        self.adjust_height( this );
+      } );
       this.adjust_height();
     }
 
-    if(this.format) this.input.setAttribute('data-schemaformat',this.format);
+    if ( this.format ) this.input.setAttribute( 'data-schemaformat', this.format );
 
-    this.control = this.theme.getFormControl(this.label, this.input, this.description);
-    this.container.appendChild(this.control);
+    this.control = this.theme.getFormControl( this.label, this.input, this.description );
+    this.container.appendChild( this.control );
 
     // Any special formatting that needs to happen after the input is added to the dom
-    window.requestAnimationFrame(function() {
+    window.requestAnimationFrame( function() {
       // Skip in case the input is only a temporary editor,
       // otherwise, in the case of an ace_editor creation,
       // it will generate an error trying to append it to the missing parentNode
-      if(self.input.parentNode) self.afterInputReady();
-      if(self.adjust_height) self.adjust_height(self.input);
-    });
+      if ( self.input.parentNode ) self.afterInputReady();
+      if ( self.adjust_height ) self.adjust_height( self.input );
+    } );
 
     // Compile and store the template
-    if(this.schema.template) {
-      this.template = this.jsoneditor.compileTemplate(this.schema.template, this.template_engine);
+    if ( this.schema.template ) {
+      this.template = this.jsoneditor.compileTemplate( this.schema.template, this.template_engine );
       this.refreshValue();
-    }
-    else {
+    } else {
       this.refreshValue();
     }
   },
   enable: function() {
-    if(!this.always_disabled) {
+    if ( !this.always_disabled ) {
       this.input.disabled = false;
       // TODO: WYSIWYG and Markdown editors
     }
@@ -2075,166 +2070,164 @@ JSONEditor.defaults.editors.string = JSONEditor.AbstractEditor.extend({
     this._super();
   },
   afterInputReady: function() {
-    var self = this, options;
-    
+    var self = this,
+      options;
+
     // Code editor
-    if(this.source_code) {      
+    if ( this.source_code ) {
       // WYSIWYG html and bbcode editor
-      if(this.options.wysiwyg && 
-        ['html','bbcode'].indexOf(this.input_type) >= 0 && 
+      if ( this.options.wysiwyg &&
+        [ 'html', 'bbcode' ].indexOf( this.input_type ) >= 0 &&
         window.jQuery && window.jQuery.fn && window.jQuery.fn.sceditor
       ) {
-        options = $extend({},{
-          plugins: self.input_type==='html'? 'xhtml' : 'bbcode',
+        options = $extend( {}, {
+          plugins: self.input_type === 'html' ? 'xhtml' : 'bbcode',
           emoticonsEnabled: false,
           width: '100%',
           height: 300
-        },JSONEditor.plugins.sceditor,self.options.sceditor_options||{});
-        
-        window.jQuery(self.input).sceditor(options);
-        
-        self.sceditor_instance = window.jQuery(self.input).sceditor('instance');
-        
-        self.sceditor_instance.blur(function() {
+        }, JSONEditor.plugins.sceditor, self.options.sceditor_options || {} );
+
+        window.jQuery( self.input ).sceditor( options );
+
+        self.sceditor_instance = window.jQuery( self.input ).sceditor( 'instance' );
+
+        self.sceditor_instance.blur( function() {
           // Get editor's value
-          var val = window.jQuery("<div>"+self.sceditor_instance.val()+"</div>");
+          var val = window.jQuery( "<div>" + self.sceditor_instance.val() + "</div>" );
           // Remove sceditor spans/divs
-          window.jQuery('#sceditor-start-marker,#sceditor-end-marker,.sceditor-nlf',val).remove();
+          window.jQuery( '#sceditor-start-marker,#sceditor-end-marker,.sceditor-nlf', val ).remove();
           // Set the value and update
           self.input.value = val.html();
           self.value = self.input.value;
           self.is_dirty = true;
-          self.onChange(true);
-        });
+          self.onChange( true );
+        } );
       }
       // EpicEditor for markdown (if it's loaded)
-      else if (this.input_type === 'markdown' && window.EpicEditor) {
-        this.epiceditor_container = document.createElement('div');
-        this.input.parentNode.insertBefore(this.epiceditor_container,this.input);
+      else if ( this.input_type === 'markdown' && window.EpicEditor ) {
+        this.epiceditor_container = document.createElement( 'div' );
+        this.input.parentNode.insertBefore( this.epiceditor_container, this.input );
         this.input.style.display = 'none';
-        
-        options = $extend({},JSONEditor.plugins.epiceditor,{
+
+        options = $extend( {}, JSONEditor.plugins.epiceditor, {
           container: this.epiceditor_container,
           clientSideStorage: false
-        });
-        
-        this.epiceditor = new window.EpicEditor(options).load();
-        
-        this.epiceditor.importFile(null,this.getValue());
-      
-        this.epiceditor.on('update',function() {
+        } );
+
+        this.epiceditor = new window.EpicEditor( options ).load();
+
+        this.epiceditor.importFile( null, this.getValue() );
+
+        this.epiceditor.on( 'update', function() {
           var val = self.epiceditor.exportFile();
           self.input.value = val;
           self.value = val;
           self.is_dirty = true;
-          self.onChange(true);
-        });
+          self.onChange( true );
+        } );
       }
       // ACE editor for everything else
-      else if(window.ace) {
+      else if ( window.ace ) {
         var mode = this.input_type;
         // aliases for c/cpp
-        if(mode === 'cpp' || mode === 'c++' || mode === 'c') {
+        if ( mode === 'cpp' || mode === 'c++' || mode === 'c' ) {
           mode = 'c_cpp';
         }
-        
-        this.ace_container = document.createElement('div');
+
+        this.ace_container = document.createElement( 'div' );
         this.ace_container.style.width = '100%';
         this.ace_container.style.position = 'relative';
         this.ace_container.style.height = '400px';
-        this.input.parentNode.insertBefore(this.ace_container,this.input);
+        this.input.parentNode.insertBefore( this.ace_container, this.input );
         this.input.style.display = 'none';
-        this.ace_editor = window.ace.edit(this.ace_container);
-        
-        this.ace_editor.setValue(this.getValue());
-        
+        this.ace_editor = window.ace.edit( this.ace_container );
+
+        this.ace_editor.setValue( this.getValue() );
+
         // The theme
-        if(JSONEditor.plugins.ace.theme) this.ace_editor.setTheme('ace/theme/'+JSONEditor.plugins.ace.theme);
+        if ( JSONEditor.plugins.ace.theme ) this.ace_editor.setTheme( 'ace/theme/' + JSONEditor.plugins.ace.theme );
         // The mode
-        mode = window.ace.require("ace/mode/"+mode);
-        if(mode) this.ace_editor.getSession().setMode(new mode.Mode());
-        
+        mode = window.ace.require( "ace/mode/" + mode );
+        if ( mode ) this.ace_editor.getSession().setMode( new mode.Mode() );
+
         // Listen for changes
-        this.ace_editor.on('change',function() {
+        this.ace_editor.on( 'change', function() {
           var val = self.ace_editor.getValue();
           self.input.value = val;
           self.refreshValue();
           self.is_dirty = true;
-          self.onChange(true);
-        });
+          self.onChange( true );
+        } );
       }
     }
-    
-    self.theme.afterInputReady(self.input);
+
+    self.theme.afterInputReady( self.input );
   },
   refreshValue: function() {
     this.value = this.input.value;
-    if(typeof this.value !== "string") this.value = '';
+    if ( typeof this.value !== "string" ) this.value = '';
     this.serialized = this.value;
   },
   destroy: function() {
     // If using SCEditor, destroy the editor instance
-    if(this.sceditor_instance) {
+    if ( this.sceditor_instance ) {
       this.sceditor_instance.destroy();
-    }
-    else if(this.epiceditor) {
+    } else if ( this.epiceditor ) {
       this.epiceditor.unload();
-    }
-    else if(this.ace_editor) {
+    } else if ( this.ace_editor ) {
       this.ace_editor.destroy();
     }
-    
-    
+
+
     this.template = null;
-    if(this.input && this.input.parentNode) this.input.parentNode.removeChild(this.input);
-    if(this.label && this.label.parentNode) this.label.parentNode.removeChild(this.label);
-    if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
+    if ( this.input && this.input.parentNode ) this.input.parentNode.removeChild( this.input );
+    if ( this.label && this.label.parentNode ) this.label.parentNode.removeChild( this.label );
+    if ( this.description && this.description.parentNode ) this.description.parentNode.removeChild( this.description );
 
     this._super();
   },
   /**
    * This is overridden in derivative editors
    */
-  sanitize: function(value) {
+  sanitize: function( value ) {
     return value;
   },
   /**
    * Re-calculates the value if needed
    */
-  onWatchedFieldChange: function() {    
-    var self = this, vars, j;
-    
+  onWatchedFieldChange: function() {
+    var self = this,
+      vars, j;
+
     // If this editor needs to be rendered by a macro template
-    if(this.template) {
+    if ( this.template ) {
       vars = this.getWatchedFieldValues();
-      this.setValue(this.template(vars),false,true);
+      this.setValue( this.template( vars ), false, true );
     }
-    
+
     this._super();
   },
-  showValidationErrors: function(errors) {
+  showValidationErrors: function( errors ) {
     var self = this;
-    
-    if(this.jsoneditor.options.show_errors === "always") {}
-    else if(!this.is_dirty && this.previous_error_setting===this.jsoneditor.options.show_errors) return;
-    
+
+    if ( this.jsoneditor.options.show_errors === "always" ) {} else if ( !this.is_dirty && this.previous_error_setting === this.jsoneditor.options.show_errors ) return;
+
     this.previous_error_setting = this.jsoneditor.options.show_errors;
 
     var messages = [];
-    $each(errors,function(i,error) {
-      if(error.path === self.path) {
-        messages.push(error.message);
+    $each( errors, function( i, error ) {
+      if ( error.path === self.path ) {
+        messages.push( error.message );
       }
-    });
+    } );
 
-    if(messages.length) {
-      this.theme.addInputError(this.input, messages.join('. ')+'.');
-    }
-    else {
-      this.theme.removeInputError(this.input);
+    if ( messages.length ) {
+      this.theme.addInputError( this.input, messages.join( '. ' ) + '.' );
+    } else {
+      this.theme.removeInputError( this.input );
     }
   }
-});
+} );
 
 JSONEditor.defaults.editors.number = JSONEditor.defaults.editors.string.extend({
   sanitize: function(value) {
@@ -3134,71 +3127,70 @@ JSONEditor.defaults.editors.object = JSONEditor.AbstractEditor.extend({
   }
 });
 
-JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
+JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend( {
   getDefault: function() {
-    return this.schema["default"] || [];
+    return this.schema[ "default" ] || [];
   },
   register: function() {
     this._super();
-    if(this.rows) {
-      for(var i=0; i<this.rows.length; i++) {
-        this.rows[i].register();
+    if ( this.rows ) {
+      for ( var i = 0; i < this.rows.length; i++ ) {
+        this.rows[ i ].register();
       }
     }
   },
   unregister: function() {
     this._super();
-    if(this.rows) {
-      for(var i=0; i<this.rows.length; i++) {
-        this.rows[i].unregister();
+    if ( this.rows ) {
+      for ( var i = 0; i < this.rows.length; i++ ) {
+        this.rows[ i ].unregister();
       }
     }
   },
   getNumColumns: function() {
-    var info = this.getItemInfo(0);
+    var info = this.getItemInfo( 0 );
     // Tabs require extra horizontal space
-    if(this.tabs_holder) {
-      return Math.max(Math.min(12,info.width+2),4);
-    }
-    else {
+    if ( this.tabs_holder ) {
+      return Math.max( Math.min( 12, info.width + 2 ), 4 );
+    } else {
       return info.width;
     }
   },
   enable: function() {
-    if(this.add_row_button) this.add_row_button.disabled = false;
-    if(this.remove_all_rows_button) this.remove_all_rows_button.disabled = false;
-    if(this.delete_last_row_button) this.delete_last_row_button.disabled = false;
-    
-    if(this.rows) {
-      for(var i=0; i<this.rows.length; i++) {
-        this.rows[i].enable();
-        
-        if(this.rows[i].moveup_button) this.rows[i].moveup_button.disabled = false;
-        if(this.rows[i].movedown_button) this.rows[i].movedown_button.disabled = false;
-        if(this.rows[i].delete_button) this.rows[i].delete_button.disabled = false;
+    if ( this.add_row_button ) this.add_row_button.disabled = false;
+    if ( this.remove_all_rows_button ) this.remove_all_rows_button.disabled = false;
+    if ( this.delete_last_row_button ) this.delete_last_row_button.disabled = false;
+
+    if ( this.rows ) {
+      for ( var i = 0; i < this.rows.length; i++ ) {
+        this.rows[ i ].enable();
+
+        if ( this.rows[ i ].moveup_button ) this.rows[ i ].moveup_button.disabled = false;
+        if ( this.rows[ i ].movedown_button ) this.rows[ i ].movedown_button.disabled = false;
+        if ( this.rows[ i ].delete_button ) this.rows[ i ].delete_button.disabled = false;
       }
     }
     this._super();
   },
   disable: function() {
-    if(this.add_row_button) this.add_row_button.disabled = true;
-    if(this.remove_all_rows_button) this.remove_all_rows_button.disabled = true;
-    if(this.delete_last_row_button) this.delete_last_row_button.disabled = true;
+    if ( this.add_row_button ) this.add_row_button.disabled = true;
+    if ( this.remove_all_rows_button ) this.remove_all_rows_button.disabled = true;
+    if ( this.delete_last_row_button ) this.delete_last_row_button.disabled = true;
 
-    if(this.rows) {
-      for(var i=0; i<this.rows.length; i++) {
-        this.rows[i].disable();
-        
-        if(this.rows[i].moveup_button) this.rows[i].moveup_button.disabled = true;
-        if(this.rows[i].movedown_button) this.rows[i].movedown_button.disabled = true;
-        if(this.rows[i].delete_button) this.rows[i].delete_button.disabled = true;
+    if ( this.rows ) {
+      for ( var i = 0; i < this.rows.length; i++ ) {
+        this.rows[ i ].disable();
+
+        if ( this.rows[ i ].moveup_button ) this.rows[ i ].moveup_button.disabled = true;
+        if ( this.rows[ i ].movedown_button ) this.rows[ i ].movedown_button.disabled = true;
+        if ( this.rows[ i ].delete_button ) this.rows[ i ].delete_button.disabled = true;
       }
     }
     this._super();
   },
   preBuild: function() {
     this._super();
-    
+
     this.rows = [];
     this.row_cache = [];
 
@@ -3209,342 +3201,321 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
   build: function() {
     var self = this;
 
-    if(!this.options.compact) {
-      this.header = document.createElement('span');
+    if ( !this.options.compact ) {
+      this.header = document.createElement( 'span' );
       this.header.textContent = this.getTitle();
-      this.title = this.theme.getHeader(this.header);
-      this.container.appendChild(this.title);
+      this.title = this.theme.getHeader( this.header );
+      this.container.appendChild( this.title );
       this.title_controls = this.theme.getHeaderButtonHolder();
-      this.title.appendChild(this.title_controls);
-      if(this.schema.description) {
-        this.description = this.theme.getDescription(this.schema.description);
-        this.container.appendChild(this.description);
+      this.title.appendChild( this.title_controls );
+      if ( this.schema.description ) {
+        this.description = this.theme.getDescription( this.schema.description );
+        this.container.appendChild( this.description );
       }
-      this.error_holder = document.createElement('div');
-      this.container.appendChild(this.error_holder);
+      this.error_holder = document.createElement( 'div' );
+      this.container.appendChild( this.error_holder );
 
-      if(this.schema.format === 'tabs') {
+      if ( this.schema.format === 'tabs' ) {
         this.controls = this.theme.getHeaderButtonHolder();
-        this.title.appendChild(this.controls);
+        this.title.appendChild( this.controls );
         this.tabs_holder = this.theme.getTabHolder();
-        this.container.appendChild(this.tabs_holder);
-        this.row_holder = this.theme.getTabContentHolder(this.tabs_holder);
+        this.container.appendChild( this.tabs_holder );
+        this.row_holder = this.theme.getTabContentHolder( this.tabs_holder );
 
         this.active_tab = null;
-      }
-      else {
+      } else {
         this.panel = this.theme.getIndentedPanel();
-        this.container.appendChild(this.panel);
-        this.row_holder = document.createElement('div');
-        this.panel.appendChild(this.row_holder);
+        this.container.appendChild( this.panel );
+        this.row_holder = document.createElement( 'div' );
+        this.panel.appendChild( this.row_holder );
         this.controls = this.theme.getButtonHolder();
-        this.panel.appendChild(this.controls);
+        this.panel.appendChild( this.controls );
       }
-    }
-    else {
-        this.panel = this.theme.getIndentedPanel();
-        this.container.appendChild(this.panel);
-        this.controls = this.theme.getButtonHolder();
-        this.panel.appendChild(this.controls);
-        this.row_holder = document.createElement('div');
-        this.panel.appendChild(this.row_holder);
+    } else {
+      this.panel = this.theme.getIndentedPanel();
+      this.container.appendChild( this.panel );
+      this.controls = this.theme.getButtonHolder();
+      this.panel.appendChild( this.controls );
+      this.row_holder = document.createElement( 'div' );
+      this.panel.appendChild( this.row_holder );
     }
 
     // Add controls
     this.addControls();
   },
-  onChildEditorChange: function(editor) {
+  onChildEditorChange: function( editor ) {
     this.refreshValue();
-    this.refreshTabs(true);
-    this._super(editor);
+    this.refreshTabs( true );
+    this._super( editor );
   },
   getItemTitle: function() {
-    if(!this.item_title) {
-      if(this.schema.items && !Array.isArray(this.schema.items)) {
-        var tmp = this.jsoneditor.expandRefs(this.schema.items);
+    if ( !this.item_title ) {
+      if ( this.schema.items && !Array.isArray( this.schema.items ) ) {
+        var tmp = this.jsoneditor.expandRefs( this.schema.items );
         this.item_title = tmp.title || 'item';
-      }
-      else {
+      } else {
         this.item_title = 'item';
       }
     }
     return this.item_title;
   },
-  getItemSchema: function(i) {
-    if(Array.isArray(this.schema.items)) {
-      if(i >= this.schema.items.length) {
-        if(this.schema.additionalItems===true) {
+  getItemSchema: function( i ) {
+    if ( Array.isArray( this.schema.items ) ) {
+      if ( i >= this.schema.items.length ) {
+        if ( this.schema.additionalItems === true ) {
           return {};
+        } else if ( this.schema.additionalItems ) {
+          return $extend( {}, this.schema.additionalItems );
         }
-        else if(this.schema.additionalItems) {
-          return $extend({},this.schema.additionalItems);
-        }
+      } else {
+        return $extend( {}, this.schema.items[ i ] );
       }
-      else {
-        return $extend({},this.schema.items[i]);
-      }
-    }
-    else if(this.schema.items) {
-      return $extend({},this.schema.items);
-    }
-    else {
+    } else if ( this.schema.items ) {
+      return $extend( {}, this.schema.items );
+    } else {
       return {};
     }
   },
-  getItemInfo: function(i) {
-    var schema = this.getItemSchema(i);
-    
+  getItemInfo: function( i ) {
+    var schema = this.getItemSchema( i );
+
     // Check if it's cached
     this.item_info = this.item_info || {};
-    var stringified = JSON.stringify(schema);
-    if(typeof this.item_info[stringified] !== "undefined") return this.item_info[stringified];
-    
+    var stringified = JSON.stringify( schema );
+    if ( typeof this.item_info[ stringified ] !== "undefined" ) return this.item_info[ stringified ];
+
     // Get the schema for this item
-    schema = this.jsoneditor.expandRefs(schema);
-      
-    this.item_info[stringified] = {
+    schema = this.jsoneditor.expandRefs( schema );
+
+    this.item_info[ stringified ] = {
       title: schema.title || "item",
-      'default': schema["default"],
+      'default': schema[ "default" ],
       width: 12,
       child_editors: schema.properties || schema.items
     };
-    
-    return this.item_info[stringified];
-  },
-  getElementEditor: function(i) {
-    var item_info = this.getItemInfo(i);
-    var schema = this.getItemSchema(i);
-    schema = this.jsoneditor.expandRefs(schema);
-    schema.title = item_info.title+' '+(i+1);
 
-    var editor = this.jsoneditor.getEditorClass(schema);
+    return this.item_info[ stringified ];
+  },
+  getElementEditor: function( i ) {
+    var item_info = this.getItemInfo( i );
+    var schema = this.getItemSchema( i );
+    schema = this.jsoneditor.expandRefs( schema );
+    schema.title = item_info.title + ' ' + ( i + 1 );
+
+    var editor = this.jsoneditor.getEditorClass( schema );
 
     var holder;
-    if(this.tabs_holder) {
+    if ( this.tabs_holder ) {
       holder = this.theme.getTabContent();
-    }
-    else if(item_info.child_editors) {
+    } else if ( item_info.child_editors ) {
       holder = this.theme.getChildEditorHolder();
-    }
-    else {
+    } else {
       holder = this.theme.getIndentedPanel();
     }
 
-    this.row_holder.appendChild(holder);
+    this.row_holder.appendChild( holder );
 
-    var ret = this.jsoneditor.createEditor(editor,{
+    var ret = this.jsoneditor.createEditor( editor, {
       jsoneditor: this.jsoneditor,
       schema: schema,
       container: holder,
-      path: this.path+'.'+i,
+      path: this.path + '.' + i,
       parent: this,
       required: true
-    });
+    } );
     ret.preBuild();
     ret.build();
     ret.postBuild();
 
-    if(!ret.title_controls) {
+    if ( !ret.title_controls ) {
       ret.array_controls = this.theme.getButtonHolder();
-      holder.appendChild(ret.array_controls);
+      holder.appendChild( ret.array_controls );
     }
-    
+
     return ret;
   },
   destroy: function() {
-    this.empty(true);
-    if(this.title && this.title.parentNode) this.title.parentNode.removeChild(this.title);
-    if(this.description && this.description.parentNode) this.description.parentNode.removeChild(this.description);
-    if(this.row_holder && this.row_holder.parentNode) this.row_holder.parentNode.removeChild(this.row_holder);
-    if(this.controls && this.controls.parentNode) this.controls.parentNode.removeChild(this.controls);
-    if(this.panel && this.panel.parentNode) this.panel.parentNode.removeChild(this.panel);
-    
+    this.empty( true );
+    if ( this.title && this.title.parentNode ) this.title.parentNode.removeChild( this.title );
+    if ( this.description && this.description.parentNode ) this.description.parentNode.removeChild( this.description );
+    if ( this.row_holder && this.row_holder.parentNode ) this.row_holder.parentNode.removeChild( this.row_holder );
+    if ( this.controls && this.controls.parentNode ) this.controls.parentNode.removeChild( this.controls );
+    if ( this.panel && this.panel.parentNode ) this.panel.parentNode.removeChild( this.panel );
+
     this.rows = this.row_cache = this.title = this.description = this.row_holder = this.panel = this.controls = null;
 
     this._super();
   },
-  empty: function(hard) {
-    if(!this.rows) return;
+  empty: function( hard ) {
+    if ( !this.rows ) return;
     var self = this;
-    $each(this.rows,function(i,row) {
-      if(hard) {
-        if(row.tab && row.tab.parentNode) row.tab.parentNode.removeChild(row.tab);
-        self.destroyRow(row,true);
-        self.row_cache[i] = null;
+    $each( this.rows, function( i, row ) {
+      if ( hard ) {
+        if ( row.tab && row.tab.parentNode ) row.tab.parentNode.removeChild( row.tab );
+        self.destroyRow( row, true );
+        self.row_cache[ i ] = null;
       }
-      self.rows[i] = null;
-    });
+      self.rows[ i ] = null;
+    } );
     self.rows = [];
-    if(hard) self.row_cache = [];
+    if ( hard ) self.row_cache = [];
   },
-  destroyRow: function(row,hard) {
+  destroyRow: function( row, hard ) {
     var holder = row.container;
-    if(hard) {
+    if ( hard ) {
       row.destroy();
-      if(holder.parentNode) holder.parentNode.removeChild(holder);
-      if(row.tab && row.tab.parentNode) row.tab.parentNode.removeChild(row.tab);
-    }
-    else {
-      if(row.tab) row.tab.style.display = 'none';
+      if ( holder.parentNode ) holder.parentNode.removeChild( holder );
+      if ( row.tab && row.tab.parentNode ) row.tab.parentNode.removeChild( row.tab );
+    } else {
+      if ( row.tab ) row.tab.style.display = 'none';
       holder.style.display = 'none';
       row.unregister();
     }
   },
   getMax: function() {
-    if((Array.isArray(this.schema.items)) && this.schema.additionalItems === false) {
-      return Math.min(this.schema.items.length,this.schema.maxItems || Infinity);
-    }
-    else {
+    if ( ( Array.isArray( this.schema.items ) ) && this.schema.additionalItems === false ) {
+      return Math.min( this.schema.items.length, this.schema.maxItems || Infinity );
+    } else {
       return this.schema.maxItems || Infinity;
     }
   },
-  refreshTabs: function(refresh_headers) {
+  refreshTabs: function( refresh_headers ) {
     var self = this;
-    $each(this.rows, function(i,row) {
-      if(!row.tab) return;
+    $each( this.rows, function( i, row ) {
+      if ( !row.tab ) return;
 
-      if(refresh_headers) {
+      if ( refresh_headers ) {
         row.tab_text.textContent = row.getHeaderText();
-      }
-      else {
-        if(row.tab === self.active_tab) {
-          self.theme.markTabActive(row.tab);
+      } else {
+        if ( row.tab === self.active_tab ) {
+          self.theme.markTabActive( row.tab );
           row.container.style.display = '';
-        }
-        else {
-          self.theme.markTabInactive(row.tab);
+        } else {
+          self.theme.markTabInactive( row.tab );
           row.container.style.display = 'none';
         }
       }
-    });
+    } );
   },
-  setValue: function(value, initial) {
+  setValue: function( value, initial ) {
     // Update the array's value, adding/removing rows when necessary
     value = value || [];
-    
-    if(!(Array.isArray(value))) value = [value];
-    
-    var serialized = JSON.stringify(value);
-    if(serialized === this.serialized) return;
+
+    if ( !( Array.isArray( value ) ) ) value = [ value ];
+
+    var serialized = JSON.stringify( value );
+    if ( serialized === this.serialized ) return;
 
     // Make sure value has between minItems and maxItems items in it
-    if(this.schema.minItems) {
-      while(value.length < this.schema.minItems) {
-        value.push(this.getItemInfo(value.length)["default"]);
+    if ( this.schema.minItems ) {
+      while ( value.length < this.schema.minItems ) {
+        value.push( this.getItemInfo( value.length )[ "default" ] );
       }
     }
-    if(this.getMax() && value.length > this.getMax()) {
-      value = value.slice(0,this.getMax());
+    if ( this.getMax() && value.length > this.getMax() ) {
+      value = value.slice( 0, this.getMax() );
     }
 
     var self = this;
-    $each(value,function(i,val) {
-      if(self.rows[i]) {
+    $each( value, function( i, val ) {
+      if ( self.rows[ i ] ) {
         // TODO: don't set the row's value if it hasn't changed
-        self.rows[i].setValue(val,initial);
+        self.rows[ i ].setValue( val, initial );
+      } else if ( self.row_cache[ i ] ) {
+        self.rows[ i ] = self.row_cache[ i ];
+        self.rows[ i ].setValue( val, initial );
+        self.rows[ i ].container.style.display = '';
+        if ( self.rows[ i ].tab ) self.rows[ i ].tab.style.display = '';
+        self.rows[ i ].register();
+      } else {
+        self.addRow( val, initial );
       }
-      else if(self.row_cache[i]) {
-        self.rows[i] = self.row_cache[i];
-        self.rows[i].setValue(val,initial);
-        self.rows[i].container.style.display = '';
-        if(self.rows[i].tab) self.rows[i].tab.style.display = '';
-        self.rows[i].register();
-      }
-      else {
-        self.addRow(val,initial);
-      }
-    });
+    } );
 
-    for(var j=value.length; j<self.rows.length; j++) {
-      self.destroyRow(self.rows[j]);
-      self.rows[j] = null;
+    for ( var j = value.length; j < self.rows.length; j++ ) {
+      self.destroyRow( self.rows[ j ] );
+      self.rows[ j ] = null;
     }
-    self.rows = self.rows.slice(0,value.length);
+    self.rows = self.rows.slice( 0, value.length );
 
     // Set the active tab
     var new_active_tab = null;
-    $each(self.rows, function(i,row) {
-      if(row.tab === self.active_tab) {
+    $each( self.rows, function( i, row ) {
+      if ( row.tab === self.active_tab ) {
         new_active_tab = row.tab;
         return false;
       }
-    });
-    if(!new_active_tab && self.rows.length) new_active_tab = self.rows[0].tab;
+    } );
+    if ( !new_active_tab && self.rows.length ) new_active_tab = self.rows[ 0 ].tab;
 
     self.active_tab = new_active_tab;
 
-    self.refreshValue(initial);
-    self.refreshTabs(true);
+    self.refreshValue( initial );
+    self.refreshTabs( true );
     self.refreshTabs();
 
     self.onChange();
-    
+
     // TODO: sortable
   },
-  refreshValue: function(force) {
+  refreshValue: function( force ) {
     var self = this;
-    var oldi = this.value? this.value.length : 0;
+    var oldi = this.value ? this.value.length : 0;
     this.value = [];
 
-    $each(this.rows,function(i,editor) {
+    $each( this.rows, function( i, editor ) {
       // Get the value for this editor
-      self.value[i] = editor.getValue();
-    });
-    
-    if(oldi !== this.value.length || force) {
+      self.value[ i ] = editor.getValue();
+    } );
+
+    if ( oldi !== this.value.length || force ) {
       // If we currently have minItems items in the array
       var minItems = this.schema.minItems && this.schema.minItems >= this.rows.length;
-      
-      $each(this.rows,function(i,editor) {
+
+      $each( this.rows, function( i, editor ) {
         // Hide the move down button for the last row
-        if(editor.movedown_button) {
-          if(i === self.rows.length - 1) {
+        if ( editor.movedown_button ) {
+          if ( i === self.rows.length - 1 ) {
             editor.movedown_button.style.display = 'none';
-          }
-          else {
+          } else {
             editor.movedown_button.style.display = '';
           }
         }
 
         // Hide the delete button if we have minItems items
-        if(editor.delete_button) {
-          if(minItems) {
+        if ( editor.delete_button ) {
+          if ( minItems ) {
             editor.delete_button.style.display = 'none';
-          }
-          else {
+          } else {
             editor.delete_button.style.display = '';
           }
         }
 
         // Get the value for this editor
-        self.value[i] = editor.getValue();
-      });
-      
+        self.value[ i ] = editor.getValue();
+      } );
+
       var controls_needed = false;
-      
-      if(!this.value.length) {
+
+      if ( !this.value.length ) {
         this.delete_last_row_button.style.display = 'none';
         this.remove_all_rows_button.style.display = 'none';
-      }
-      else if(this.value.length === 1) {      
-        this.remove_all_rows_button.style.display = 'none';  
+      } else if ( this.value.length === 1 ) {
+        this.remove_all_rows_button.style.display = 'none';
 
         // If there are minItems items in the array, hide the delete button beneath the rows
-        if(minItems || this.hide_delete_buttons) {
+        if ( minItems || this.hide_delete_buttons ) {
           this.delete_last_row_button.style.display = 'none';
-        }
-        else {
+        } else {
           this.delete_last_row_button.style.display = '';
           controls_needed = true;
         }
-      }
-      else {
+      } else {
         // If there are minItems items in the array, hide the delete button beneath the rows
-        if(minItems || this.hide_delete_buttons) {
+        if ( minItems || this.hide_delete_buttons ) {
           this.delete_last_row_button.style.display = 'none';
           this.remove_all_rows_button.style.display = 'none';
-        }
-        else {
+        } else {
           this.delete_last_row_button.style.display = '';
           this.remove_all_rows_button.style.display = '';
           controls_needed = true;
@@ -3552,276 +3523,270 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
       }
 
       // If there are maxItems in the array, hide the add button beneath the rows
-      if((this.getMax() && this.getMax() <= this.rows.length) || this.hide_add_button){
+      if ( ( this.getMax() && this.getMax() <= this.rows.length ) || this.hide_add_button ) {
         this.add_row_button.style.display = 'none';
-      }
-      else {
+      } else {
         this.add_row_button.style.display = '';
         controls_needed = true;
-      } 
-      
-      if(!this.collapsed && controls_needed) {
-        this.controls.style.display = 'inline-block';
       }
-      else {
+
+      if ( !this.collapsed && controls_needed ) {
+        this.controls.style.display = 'inline-block';
+      } else {
         this.controls.style.display = 'none';
       }
     }
   },
-  addRow: function(value, initial) {
+  addRow: function( value, initial ) {
     var self = this;
     var i = this.rows.length;
-    
-    self.rows[i] = this.getElementEditor(i);
-    self.row_cache[i] = self.rows[i];
 
-    if(self.tabs_holder) {
-      self.rows[i].tab_text = document.createElement('span');
-      self.rows[i].tab_text.textContent = self.rows[i].getHeaderText();
-      self.rows[i].tab = self.theme.getTab(self.rows[i].tab_text);
-      self.rows[i].tab.addEventListener('click', function(e) {
-        self.active_tab = self.rows[i].tab;
+    self.rows[ i ] = this.getElementEditor( i );
+    self.row_cache[ i ] = self.rows[ i ];
+
+    if ( self.tabs_holder ) {
+      self.rows[ i ].tab_text = document.createElement( 'span' );
+      self.rows[ i ].tab_text.textContent = self.rows[ i ].getHeaderText();
+      self.rows[ i ].tab = self.theme.getTab( self.rows[ i ].tab_text );
+      self.rows[ i ].tab.addEventListener( 'click', function( e ) {
+        self.active_tab = self.rows[ i ].tab;
         self.refreshTabs();
         e.preventDefault();
         e.stopPropagation();
-      });
+      } );
 
-      self.theme.addTab(self.tabs_holder, self.rows[i].tab);
+      self.theme.addTab( self.tabs_holder, self.rows[ i ].tab );
     }
-    
-    var controls_holder = self.rows[i].title_controls || self.rows[i].array_controls;
-    
+
+    var controls_holder = self.rows[ i ].title_controls || self.rows[ i ].array_controls;
+
     // Buttons to delete row, move row up, and move row down
-    if(!self.hide_delete_buttons) {
-      self.rows[i].delete_button = this.getButton(self.getItemTitle(),'delete','Delete '+self.getItemTitle());
-      self.rows[i].delete_button.className += ' delete';
-      self.rows[i].delete_button.setAttribute('data-i',i);
-      self.rows[i].delete_button.addEventListener('click',function(e) {
+    if ( !self.hide_delete_buttons ) {
+      self.rows[ i ].delete_button = this.getButton( 'Delete ' + self.getItemTitle(), 'delete', 'Delete ' + self.getItemTitle() );
+      self.rows[ i ].delete_button.className += ' delete';
+      self.rows[ i ].delete_button.setAttribute( 'data-i', i );
+      self.rows[ i ].delete_button.addEventListener( 'click', function( e ) {
         e.preventDefault();
         e.stopPropagation();
-        var i = this.getAttribute('data-i')*1;
+        var i = this.getAttribute( 'data-i' ) * 1;
 
         var value = self.getValue();
 
         var newval = [];
         var new_active_tab = null;
-        $each(value,function(j,row) {
-          if(j===i) {
+        $each( value, function( j, row ) {
+          if ( j === i ) {
             // If the one we're deleting is the active tab
-            if(self.rows[j].tab === self.active_tab) {
+            if ( self.rows[ j ].tab === self.active_tab ) {
               // Make the next tab active if there is one
               // Note: the next tab is going to be the current tab after deletion
-              if(self.rows[j+1]) new_active_tab = self.rows[j].tab;
+              if ( self.rows[ j + 1 ] ) new_active_tab = self.rows[ j ].tab;
               // Otherwise, make the previous tab active if there is one
-              else if(j) new_active_tab = self.rows[j-1].tab;
+              else if ( j ) new_active_tab = self.rows[ j - 1 ].tab;
             }
-            
+
             return; // If this is the one we're deleting
           }
-          newval.push(row);
-        });
-        self.setValue(newval);
-        if(new_active_tab) {
+          newval.push( row );
+        } );
+        self.setValue( newval );
+        if ( new_active_tab ) {
           self.active_tab = new_active_tab;
           self.refreshTabs();
         }
 
-        self.onChange(true);
-      });
-      
-      if(controls_holder) {
-        controls_holder.appendChild(self.rows[i].delete_button);
+        self.onChange( true );
+      } );
+
+      if ( controls_holder ) {
+        controls_holder.appendChild( self.rows[ i ].delete_button );
       }
     }
-    
-    if(i && !self.hide_move_buttons) {
-      self.rows[i].moveup_button = this.getButton('','moveup','Move up');
-      self.rows[i].moveup_button.className += ' moveup';
-      self.rows[i].moveup_button.setAttribute('data-i',i);
-      self.rows[i].moveup_button.addEventListener('click',function(e) {
+
+    if ( i && !self.hide_move_buttons ) {
+      self.rows[ i ].moveup_button = this.getButton( '', 'moveup', 'Move up' );
+      self.rows[ i ].moveup_button.className += ' moveup';
+      self.rows[ i ].moveup_button.setAttribute( 'data-i', i );
+      self.rows[ i ].moveup_button.addEventListener( 'click', function( e ) {
         e.preventDefault();
         e.stopPropagation();
-        var i = this.getAttribute('data-i')*1;
+        var i = this.getAttribute( 'data-i' ) * 1;
 
-        if(i<=0) return;
+        if ( i <= 0 ) return;
         var rows = self.getValue();
-        var tmp = rows[i-1];
-        rows[i-1] = rows[i];
-        rows[i] = tmp;
+        var tmp = rows[ i - 1 ];
+        rows[ i - 1 ] = rows[ i ];
+        rows[ i ] = tmp;
 
-        self.setValue(rows);
-        self.active_tab = self.rows[i-1].tab;
+        self.setValue( rows );
+        self.active_tab = self.rows[ i - 1 ].tab;
         self.refreshTabs();
 
-        self.onChange(true);
-      });
-      
-      if(controls_holder) {
-        controls_holder.appendChild(self.rows[i].moveup_button);
+        self.onChange( true );
+      } );
+
+      if ( controls_holder ) {
+        controls_holder.appendChild( self.rows[ i ].moveup_button );
       }
     }
-    
-    if(!self.hide_move_buttons) {
-      self.rows[i].movedown_button = this.getButton('','movedown','Move down');
-      self.rows[i].movedown_button.className += ' movedown';
-      self.rows[i].movedown_button.setAttribute('data-i',i);
-      self.rows[i].movedown_button.addEventListener('click',function(e) {
+
+    if ( !self.hide_move_buttons ) {
+      self.rows[ i ].movedown_button = this.getButton( '', 'movedown', 'Move down' );
+      self.rows[ i ].movedown_button.className += ' movedown';
+      self.rows[ i ].movedown_button.setAttribute( 'data-i', i );
+      self.rows[ i ].movedown_button.addEventListener( 'click', function( e ) {
         e.preventDefault();
         e.stopPropagation();
-        var i = this.getAttribute('data-i')*1;
+        var i = this.getAttribute( 'data-i' ) * 1;
 
         var rows = self.getValue();
-        if(i>=rows.length-1) return;
-        var tmp = rows[i+1];
-        rows[i+1] = rows[i];
-        rows[i] = tmp;
+        if ( i >= rows.length - 1 ) return;
+        var tmp = rows[ i + 1 ];
+        rows[ i + 1 ] = rows[ i ];
+        rows[ i ] = tmp;
 
-        self.setValue(rows);
-        self.active_tab = self.rows[i+1].tab;
+        self.setValue( rows );
+        self.active_tab = self.rows[ i + 1 ].tab;
         self.refreshTabs();
-        self.onChange(true);
-      });
-      
-      if(controls_holder) {
-        controls_holder.appendChild(self.rows[i].movedown_button);
+        self.onChange( true );
+      } );
+
+      if ( controls_holder ) {
+        controls_holder.appendChild( self.rows[ i ].movedown_button );
       }
     }
 
-    if(value) self.rows[i].setValue(value, initial);
+    if ( value ) self.rows[ i ].setValue( value, initial );
     self.refreshTabs();
   },
   addControls: function() {
     var self = this;
-    
+
     this.collapsed = false;
-    this.toggle_button = this.getButton('','collapse','Collapse');
-    this.title_controls.appendChild(this.toggle_button);
+    this.toggle_button = this.getButton( '', 'collapse', 'Collapse' );
+    this.title_controls.appendChild( this.toggle_button );
     var row_holder_display = self.row_holder.style.display;
     var controls_display = self.controls.style.display;
-    this.toggle_button.addEventListener('click',function(e) {
+    this.toggle_button.addEventListener( 'click', function( e ) {
       e.preventDefault();
       e.stopPropagation();
-      if(self.collapsed) {
+      if ( self.collapsed ) {
         self.collapsed = false;
-        if(self.panel) self.panel.style.display = '';
+        if ( self.panel ) self.panel.style.display = '';
         self.row_holder.style.display = row_holder_display;
-        if(self.tabs_holder) self.tabs_holder.style.display = '';
+        if ( self.tabs_holder ) self.tabs_holder.style.display = '';
         self.controls.style.display = controls_display;
-        self.setButtonText(this,'','collapse','Collapse');
-      }
-      else {
+        self.setButtonText( this, '', 'collapse', 'Collapse' );
+      } else {
         self.collapsed = true;
         self.row_holder.style.display = 'none';
-        if(self.tabs_holder) self.tabs_holder.style.display = 'none';
+        if ( self.tabs_holder ) self.tabs_holder.style.display = 'none';
         self.controls.style.display = 'none';
-        if(self.panel) self.panel.style.display = 'none';
-        self.setButtonText(this,'','expand','Expand');
+        if ( self.panel ) self.panel.style.display = 'none';
+        self.setButtonText( this, '', 'expand', 'Expand' );
       }
-    });
+    } );
 
     // If it should start collapsed
-    if(this.options.collapsed) {
-      $trigger(this.toggle_button,'click');
+    if ( this.options.collapsed ) {
+      $trigger( this.toggle_button, 'click' );
     }
-    
+
     // Collapse button disabled
-    if(this.schema.options && typeof this.schema.options.disable_collapse !== "undefined") {
-      if(this.schema.options.disable_collapse) this.toggle_button.style.display = 'none';
-    }
-    else if(this.jsoneditor.options.disable_collapse) {
+    if ( this.schema.options && typeof this.schema.options.disable_collapse !== "undefined" ) {
+      if ( this.schema.options.disable_collapse ) this.toggle_button.style.display = 'none';
+    } else if ( this.jsoneditor.options.disable_collapse ) {
       this.toggle_button.style.display = 'none';
     }
-    
+
     // Add "new row" and "delete last" buttons below editor
-    this.add_row_button = this.getButton(this.getItemTitle(),'add','Add '+this.getItemTitle());
-    
-    this.add_row_button.addEventListener('click',function(e) {
+    this.add_row_button = this.getButton( this.getItemTitle(), 'add', 'Add ' + this.getItemTitle() );
+
+    this.add_row_button.addEventListener( 'click', function( e ) {
       e.preventDefault();
       e.stopPropagation();
       var i = self.rows.length;
-      if(self.row_cache[i]) {
-        self.rows[i] = self.row_cache[i];
-        self.rows[i].setValue(self.rows[i].getDefault());
-        self.rows[i].container.style.display = '';
-        if(self.rows[i].tab) self.rows[i].tab.style.display = '';
-        self.rows[i].register();
-      }
-      else {
+      if ( self.row_cache[ i ] ) {
+        self.rows[ i ] = self.row_cache[ i ];
+        self.rows[ i ].setValue( self.rows[ i ].getDefault() );
+        self.rows[ i ].container.style.display = '';
+        if ( self.rows[ i ].tab ) self.rows[ i ].tab.style.display = '';
+        self.rows[ i ].register();
+      } else {
         self.addRow();
       }
-      self.active_tab = self.rows[i].tab;
+      self.active_tab = self.rows[ i ].tab;
       self.refreshTabs();
       self.refreshValue();
-      self.onChange(true);
-    });
-    self.controls.appendChild(this.add_row_button);
+      self.onChange( true );
+    } );
+    self.controls.appendChild( this.add_row_button );
 
-    this.delete_last_row_button = this.getButton('Last '+this.getItemTitle(),'delete','Delete Last '+this.getItemTitle());
-    this.delete_last_row_button.addEventListener('click',function(e) {
+    this.delete_last_row_button = this.getButton( 'Delete Last ' + this.getItemTitle(), 'delete', 'Delete Last ' + this.getItemTitle() );
+    this.delete_last_row_button.addEventListener( 'click', function( e ) {
       e.preventDefault();
       e.stopPropagation();
       var rows = self.getValue();
-      
+
       var new_active_tab = null;
-      if(self.rows.length > 1 && self.rows[self.rows.length-1].tab === self.active_tab) new_active_tab = self.rows[self.rows.length-2].tab;
-      
+      if ( self.rows.length > 1 && self.rows[ self.rows.length - 1 ].tab === self.active_tab ) new_active_tab = self.rows[ self.rows.length - 2 ].tab;
+
       rows.pop();
-      self.setValue(rows);
-      if(new_active_tab) {
+      self.setValue( rows );
+      if ( new_active_tab ) {
         self.active_tab = new_active_tab;
         self.refreshTabs();
       }
-      self.onChange(true);
-    });
-    self.controls.appendChild(this.delete_last_row_button);
+      self.onChange( true );
+    } );
+    self.controls.appendChild( this.delete_last_row_button );
 
-    this.remove_all_rows_button = this.getButton('All','delete','Delete All');
-    this.remove_all_rows_button.addEventListener('click',function(e) {
+    this.remove_all_rows_button = this.getButton( 'Delete All', 'delete', 'Delete All' );
+    this.remove_all_rows_button.addEventListener( 'click', function( e ) {
       e.preventDefault();
       e.stopPropagation();
-      self.setValue([]);
-      self.onChange(true);
-    });
-    self.controls.appendChild(this.remove_all_rows_button);
+      self.setValue( [] );
+      self.onChange( true );
+    } );
+    self.controls.appendChild( this.remove_all_rows_button );
 
-    if(self.tabs) {
+    if ( self.tabs ) {
       this.add_row_button.style.width = '100%';
       this.add_row_button.style.textAlign = 'left';
       this.add_row_button.style.marginBottom = '3px';
-      
+
       this.delete_last_row_button.style.width = '100%';
       this.delete_last_row_button.style.textAlign = 'left';
       this.delete_last_row_button.style.marginBottom = '3px';
-      
+
       this.remove_all_rows_button.style.width = '100%';
       this.remove_all_rows_button.style.textAlign = 'left';
       this.remove_all_rows_button.style.marginBottom = '3px';
     }
   },
-  showValidationErrors: function(errors) {
+  showValidationErrors: function( errors ) {
     var self = this;
 
     // Get all the errors that pertain to this editor
     var my_errors = [];
     var other_errors = [];
-    $each(errors, function(i,error) {
-      if(error.path === self.path) {
-        my_errors.push(error);
+    $each( errors, function( i, error ) {
+      if ( error.path === self.path ) {
+        my_errors.push( error );
+      } else {
+        other_errors.push( error );
       }
-      else {
-        other_errors.push(error);
-      }
-    });
+    } );
 
     // Show errors for this editor
-    if(this.error_holder) {
-      if(my_errors.length) {
+    if ( this.error_holder ) {
+      if ( my_errors.length ) {
         var message = [];
         this.error_holder.innerHTML = '';
         this.error_holder.style.display = '';
-        $each(my_errors, function(i,error) {
-          self.error_holder.appendChild(self.theme.getErrorMessage(error.message));
-        });
+        $each( my_errors, function( i, error ) {
+          self.error_holder.appendChild( self.theme.getErrorMessage( error.message ) );
+        } );
       }
       // Hide error area
       else {
@@ -3830,11 +3795,11 @@ JSONEditor.defaults.editors.array = JSONEditor.AbstractEditor.extend({
     }
 
     // Show errors for child editors
-    $each(this.rows, function(i,row) {
-      row.showValidationErrors(other_errors);
-    });
+    $each( this.rows, function( i, row ) {
+      row.showValidationErrors( other_errors );
+    } );
   }
-});
+} );
 
 JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
   register: function() {
@@ -3880,7 +3845,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     var tmp = this.getElementEditor(0,true);
     this.item_default = tmp.getDefault();
     this.width = tmp.getNumColumns() + 2;
-    
+
     if(!this.options.compact) {
       this.title = this.theme.getHeader(this.getTitle());
       this.container.appendChild(this.title);
@@ -3956,7 +3921,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
       compact: true,
       table_row: true
     });
-    
+
     ret.preBuild();
     if(!ignore) {
       ret.build();
@@ -3969,7 +3934,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
       ret.table_controls.style.margin = 0;
       ret.table_controls.style.padding = 0;
     }
-    
+
     return ret;
   },
   destroy: function() {
@@ -3997,7 +3962,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     if(this.schema.maxItems && value.length > this.schema.maxItems) {
       value = value.slice(0,this.schema.maxItems);
     }
-    
+
     var serialized = JSON.stringify(value);
     if(serialized === this.serialized) return;
 
@@ -4031,15 +3996,15 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     if(numrows_changed || initial) self.refreshRowButtons();
 
     self.onChange();
-          
+
     // TODO: sortable
   },
   refreshRowButtons: function() {
     var self = this;
-    
+
     // If we currently have minItems items in the array
     var minItems = this.schema.minItems && this.schema.minItems >= this.rows.length;
-    
+
     var need_row_buttons = false;
     $each(this.rows,function(i,editor) {
       // Hide the move down button for the last row
@@ -4063,12 +4028,12 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
           editor.delete_button.style.display = '';
         }
       }
-      
+
       if(editor.moveup_button) {
         need_row_buttons = true;
       }
     });
-    
+
     // Show/hide controls column in table
     $each(this.rows,function(i,editor) {
       if(need_row_buttons) {
@@ -4084,9 +4049,9 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     else {
       this.controls_header_cell.style.display = 'none';
     }
-    
+
     var controls_needed = false;
-  
+
     if(!this.value.length) {
       this.delete_last_row_button.style.display = 'none';
       this.remove_all_rows_button.style.display = 'none';
@@ -4127,7 +4092,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
       this.add_row_button.style.display = '';
       controls_needed = true;
     }
-    
+
     if(!controls_needed) {
       this.controls.style.display = 'none';
     }
@@ -4176,7 +4141,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
       controls_holder.appendChild(self.rows[i].delete_button);
     }
 
-    
+
     if(i && !this.hide_move_buttons) {
       self.rows[i].moveup_button = this.getButton('','moveup','Move up');
       self.rows[i].moveup_button.className += ' moveup';
@@ -4197,7 +4162,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
       });
       controls_holder.appendChild(self.rows[i].moveup_button);
     }
-    
+
     if(!this.hide_move_buttons) {
       self.rows[i].movedown_button = this.getButton('','movedown','Move down');
       self.rows[i].movedown_button.className += ' movedown';
@@ -4262,7 +4227,7 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     this.add_row_button.addEventListener('click',function(e) {
       e.preventDefault();
       e.stopPropagation();
-      
+
       self.addRow();
       self.refreshValue();
       self.refreshRowButtons();
@@ -4270,11 +4235,11 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     });
     self.controls.appendChild(this.add_row_button);
 
-    this.delete_last_row_button = this.getButton('Last '+this.getItemTitle(),'delete','Delete Last '+this.getItemTitle());
+    this.delete_last_row_button = this.getButton('Delete Last '+this.getItemTitle(),'delete','Delete Last '+this.getItemTitle());
     this.delete_last_row_button.addEventListener('click',function(e) {
       e.preventDefault();
       e.stopPropagation();
-      
+
       var rows = self.getValue();
       rows.pop();
       self.setValue(rows);
@@ -4282,11 +4247,11 @@ JSONEditor.defaults.editors.table = JSONEditor.defaults.editors.array.extend({
     });
     self.controls.appendChild(this.delete_last_row_button);
 
-    this.remove_all_rows_button = this.getButton('All','delete','Delete All');
+    this.remove_all_rows_button = this.getButton( 'Delete All', 'delete', 'Delete All' );
     this.remove_all_rows_button.addEventListener('click',function(e) {
       e.preventDefault();
       e.stopPropagation();
-      
+
       self.setValue([]);
       self.onChange(true);
     });
